@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/yaitoo/htmx"
 )
@@ -31,6 +32,18 @@ func main() {
 	}
 	app := htmx.New(opts...)
 
+	app.Use(func(next htmx.HandleFunc) htmx.HandleFunc {
+		return func(c *htmx.Context) error {
+			n := time.Now()
+			defer func() {
+				duration := time.Since(n)
+
+				log.Println(c.Routing.Pattern, duration)
+			}()
+			return next(c)
+		}
+	})
+
 	app.Get("/{$}", func(c *htmx.Context) error {
 		return c.View(map[string]string{
 			"Name": "go-htmx",
@@ -41,6 +54,19 @@ func main() {
 		id := c.Request().PathValue("id")
 		user := getUserById(id)
 		return c.View(user)
+	})
+
+	admin := app.Group("/admin")
+
+	admin.Use(func(next htmx.HandleFunc) htmx.HandleFunc {
+		return func(c *htmx.Context) error {
+			token := c.Request().Header.Get("X-Token")
+			if !checkToken(token) {
+				c.WriteStatus(http.StatusUnauthorized)
+				return htmx.ErrCancelled
+			}
+			return next(c)
+		}
 	})
 
 	app.Start()
@@ -63,6 +89,10 @@ func getUserById(id string) User {
 		ID:   id,
 		Name: "Yaitoo",
 	}
+}
+
+func checkToken(token string) bool {
+	return true
 }
 
 type User struct {
