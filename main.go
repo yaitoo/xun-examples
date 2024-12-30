@@ -12,7 +12,10 @@ import (
 	"github.com/yaitoo/htmx"
 )
 
-//go:embed app
+//go:embed app/components
+//go:embed app/public
+//go:embed app/layouts
+//go:embed app/pages
 var fsys embed.FS
 
 func main() {
@@ -60,13 +63,59 @@ func main() {
 
 	admin.Use(func(next htmx.HandleFunc) htmx.HandleFunc {
 		return func(c *htmx.Context) error {
-			token := c.Request().Header.Get("X-Token")
-			if !checkToken(token) {
-				c.WriteStatus(http.StatusUnauthorized)
+			s, err := c.Request().Cookie("session")
+			if err != nil || s == nil || s.Value == "" {
+				c.Redirect("/login?return=" + c.Request().URL.String())
 				return htmx.ErrCancelled
 			}
+
+			c.Request().SetPathValue("session", s.Value)
 			return next(c)
 		}
+	})
+
+	admin.Get("/{$}", func(c *htmx.Context) error {
+		return c.View(User{
+			Name: c.Request().PathValue("session"),
+		})
+	})
+
+	app.Post("/login", func(c *htmx.Context) error {
+
+		it, err := htmx.BindForm[Login](c.Request())
+
+		if err != nil {
+			c.WriteStatus(http.StatusBadRequest)
+			return htmx.ErrCancelled
+		}
+
+		if !it.Validate(c.AcceptLanguage()...) {
+			c.WriteStatus(http.StatusBadRequest)
+			return c.View(it)
+		}
+
+		if it.Data.Email != "htmx@yaitoo.cn" || it.Data.Password != "123" {
+			c.WriteHtmxHeader(htmx.HxTrigger, htmx.HtmxHeader[string]{
+				"showMessage": "Email or password is incorrect",
+			})
+			c.WriteStatus(http.StatusBadRequest)
+			return c.View(it)
+		}
+
+		cookie := http.Cookie{
+			Name:     "session",
+			Value:    it.Data.Email,
+			Path:     "/",
+			MaxAge:   3600,
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteLaxMode,
+		}
+
+		http.SetCookie(c.Writer(), &cookie)
+
+		c.Redirect(c.GetCurrentUrl().Query().Get("return"))
+		return nil
 	})
 
 	app.Start()
@@ -93,6 +142,11 @@ func getUserById(id string) User {
 
 func checkToken(token string) bool {
 	return true
+}
+
+type Login struct {
+	Email    string `form:"email" validate:"required,email"`
+	Password string `form:"password" validate:"required"`
 }
 
 type User struct {
