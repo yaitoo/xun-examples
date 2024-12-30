@@ -69,14 +69,15 @@ func main() {
 				return htmx.ErrCancelled
 			}
 
-			c.Request().SetPathValue("session", s.Value)
+			c.Set("session", s.Value)
 			return next(c)
 		}
 	})
 
 	admin.Get("/{$}", func(c *htmx.Context) error {
+
 		return c.View(User{
-			Name: c.Request().PathValue("session"),
+			Name: c.Get("session").(string),
 		})
 	})
 
