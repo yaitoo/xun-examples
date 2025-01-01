@@ -5,11 +5,13 @@ import (
 	"flag"
 	"io/fs"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/yaitoo/htmx"
+	"github.com/yaitoo/xun"
+	"github.com/yaitoo/xun/ext/htmx"
 )
 
 //go:embed app/components
@@ -24,19 +26,21 @@ func main() {
 
 	flag.Parse()
 
-	var opts []htmx.Option
+	var opts []xun.Option
 	if dev {
 		// use local filesystem in development, and watch files to reload automatically
-		opts = []htmx.Option{htmx.WithFsys(os.DirFS("./app")), htmx.WithWatch()}
+		opts = []xun.Option{xun.WithFsys(os.DirFS("./app")), xun.WithWatch()}
 	} else {
 		// use embed resources in production environment
 		views, _ := fs.Sub(fsys, "app")
-		opts = []htmx.Option{htmx.WithFsys(views)}
+		opts = []xun.Option{xun.WithFsys(views)}
 	}
-	app := htmx.New(opts...)
 
-	app.Use(func(next htmx.HandleFunc) htmx.HandleFunc {
-		return func(c *htmx.Context) error {
+	opts = append(opts, xun.WithInterceptor(htmx.New()))
+	app := xun.New(opts...)
+
+	app.Use(func(next xun.HandleFunc) xun.HandleFunc {
+		return func(c *xun.Context) error {
 			n := time.Now()
 			defer func() {
 				duration := time.Since(n)
@@ -47,13 +51,13 @@ func main() {
 		}
 	})
 
-	app.Get("/{$}", func(c *htmx.Context) error {
+	app.Get("/{$}", func(c *xun.Context) error {
 		return c.View(map[string]string{
-			"Name": "go-htmx",
+			"Name": "go-xun",
 		})
 	})
 
-	app.Get("/user/{id}", func(c *htmx.Context) error {
+	app.Get("/user/{id}", func(c *xun.Context) error {
 		id := c.Request().PathValue("id")
 		user := getUserById(id)
 		return c.View(user)
@@ -61,12 +65,12 @@ func main() {
 
 	admin := app.Group("/admin")
 
-	admin.Use(func(next htmx.HandleFunc) htmx.HandleFunc {
-		return func(c *htmx.Context) error {
+	admin.Use(func(next xun.HandleFunc) xun.HandleFunc {
+		return func(c *xun.Context) error {
 			s, err := c.Request().Cookie("session")
 			if err != nil || s == nil || s.Value == "" {
 				c.Redirect("/login?return=" + c.Request().URL.String())
-				return htmx.ErrCancelled
+				return xun.ErrCancelled
 			}
 
 			c.Set("session", s.Value)
@@ -74,20 +78,20 @@ func main() {
 		}
 	})
 
-	admin.Get("/{$}", func(c *htmx.Context) error {
+	admin.Get("/{$}", func(c *xun.Context) error {
 
 		return c.View(User{
 			Name: c.Get("session").(string),
 		})
 	})
 
-	app.Post("/login", func(c *htmx.Context) error {
+	app.Post("/login", func(c *xun.Context) error {
 
-		it, err := htmx.BindForm[Login](c.Request())
+		it, err := xun.BindForm[Login](c.Request())
 
 		if err != nil {
 			c.WriteStatus(http.StatusBadRequest)
-			return htmx.ErrCancelled
+			return xun.ErrCancelled
 		}
 
 		if !it.Validate(c.AcceptLanguage()...) {
@@ -95,8 +99,8 @@ func main() {
 			return c.View(it)
 		}
 
-		if it.Data.Email != "htmx@yaitoo.cn" || it.Data.Password != "123" {
-			c.WriteHtmxHeader(htmx.HxTrigger, htmx.HtmxHeader[string]{
+		if it.Data.Email != "xun@yaitoo.cn" || it.Data.Password != "123" {
+			htmx.WriteHeader(c, htmx.HxTrigger, htmx.HxHeader[string]{
 				"showMessage": "Email or password is incorrect",
 			})
 			c.WriteStatus(http.StatusBadRequest)
@@ -115,7 +119,7 @@ func main() {
 
 		http.SetCookie(c.Writer(), &cookie)
 
-		c.Redirect(c.GetCurrentUrl().Query().Get("return"))
+		c.Redirect(c.RequestReferer().Query().Get("return"))
 		return nil
 	})
 
@@ -123,9 +127,9 @@ func main() {
 	defer app.Close()
 
 	if dev {
-		log.Println("htmx-admin is running in development")
+		slog.Default().Info("xun-admin is running in development")
 	} else {
-		log.Println("htmx-admin is running in production")
+		slog.Default().Info("xun-admin is running in production")
 	}
 
 	err := http.ListenAndServe(":80", http.DefaultServeMux)
