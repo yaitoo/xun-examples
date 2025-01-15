@@ -7,6 +7,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 //go:embed app/public
 //go:embed app/layouts
 //go:embed app/pages
+//go:embed app/text
 var fsys embed.FS
 
 func main() {
@@ -61,6 +63,14 @@ func main() {
 		id := c.Request().PathValue("id")
 		user := getUserById(id)
 		return c.View(user)
+	})
+
+	app.Get("/sitemap.xml", func(c *xun.Context) error {
+		return c.View(struct {
+			LastMod time.Time
+		}{
+			LastMod: time.Now(),
+		}, "text/sitemap.xml")
 	})
 
 	admin := app.Group("/admin")
@@ -119,7 +129,9 @@ func main() {
 
 		http.SetCookie(c.Writer(), &cookie)
 
-		c.Redirect(c.RequestReferer().Query().Get("return"))
+		ref, _ := url.Parse(c.RequestReferer())
+
+		c.Redirect(ref.Query().Get("return"))
 		return nil
 	})
 
