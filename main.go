@@ -60,7 +60,7 @@ func main() {
 	})
 
 	app.Get("/user/{id}", func(c *xun.Context) error {
-		id := c.Request().PathValue("id")
+		id := c.Request.PathValue("id")
 		user := getUserById(id)
 		return c.View(user)
 	})
@@ -77,9 +77,9 @@ func main() {
 
 	admin.Use(func(next xun.HandleFunc) xun.HandleFunc {
 		return func(c *xun.Context) error {
-			s, err := c.Request().Cookie("session")
+			s, err := c.Request.Cookie("session")
 			if err != nil || s == nil || s.Value == "" {
-				c.Redirect("/login?return=" + c.Request().URL.String())
+				c.Redirect("/login?return=" + c.Request.URL.String())
 				return xun.ErrCancelled
 			}
 
@@ -97,7 +97,7 @@ func main() {
 
 	app.Post("/login", func(c *xun.Context) error {
 
-		it, err := xun.BindForm[Login](c.Request())
+		it, err := xun.BindForm[Login](c.Request)
 
 		if err != nil {
 			c.WriteStatus(http.StatusBadRequest)
@@ -127,7 +127,7 @@ func main() {
 			SameSite: http.SameSiteLaxMode,
 		}
 
-		http.SetCookie(c.Writer(), &cookie)
+		http.SetCookie(c.Response, &cookie)
 
 		ref, _ := url.Parse(c.RequestReferer())
 
