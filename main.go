@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/yaitoo/xun"
+	"github.com/yaitoo/xun/ext/form"
 	"github.com/yaitoo/xun/ext/htmx"
 )
 
@@ -97,7 +98,7 @@ func main() {
 
 	app.Post("/login", func(c *xun.Context) error {
 
-		it, err := xun.BindForm[Login](c.Request)
+		it, err := form.BindForm[Login](c.Request)
 
 		if err != nil {
 			c.WriteStatus(http.StatusBadRequest)
