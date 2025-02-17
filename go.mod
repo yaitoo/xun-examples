@@ -2,7 +2,7 @@ module github.com/yaitoo/xun-examples
 
 go 1.23.4
 
-require github.com/yaitoo/xun v1.1.1
+require github.com/yaitoo/xun v1.1.2
 
 require (
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect

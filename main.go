@@ -42,17 +42,7 @@ func main() {
 	opts = append(opts, xun.WithInterceptor(htmx.New()))
 	app := xun.New(opts...)
 
-	app.Use(func(next xun.HandleFunc) xun.HandleFunc {
-		return func(c *xun.Context) error {
-			n := time.Now()
-			defer func() {
-				duration := time.Since(n)
-
-				log.Println(c.Routing.Pattern, duration)
-			}()
-			return next(c)
-		}
-	})
+	app.Use(loggingRequest, loadSession)
 
 	app.Get("/{$}", func(c *xun.Context) error {
 		return c.View(map[string]string{
@@ -76,23 +66,23 @@ func main() {
 
 	admin := app.Group("/admin")
 
-	admin.Use(func(next xun.HandleFunc) xun.HandleFunc {
-		return func(c *xun.Context) error {
-			s, err := c.Request.Cookie("session")
-			if err != nil || s == nil || s.Value == "" {
-				c.Redirect("/login?return=" + c.Request.URL.String())
-				return xun.ErrCancelled
-			}
+	admin.Use(loggingRequest, loadSession,
+		func(next xun.HandleFunc) xun.HandleFunc {
+			return func(c *xun.Context) error {
+				_, ok := c.Get("Session").(string)
+				if !ok {
+					c.Redirect("/login?return=" + c.Request.URL.Path)
+					return xun.ErrCancelled
+				}
 
-			c.Set("session", s.Value)
-			return next(c)
-		}
-	})
+				return next(c)
+			}
+		})
 
 	admin.Get("/{$}", func(c *xun.Context) error {
-
+		s, _ := c.Get("Session").(string)
 		return c.View(User{
-			Name: c.Get("session").(string),
+			Name: s,
 		})
 	})
 
@@ -132,7 +122,13 @@ func main() {
 
 		ref, _ := url.Parse(c.RequestReferer())
 
-		c.Redirect(ref.Query().Get("return"))
+		ret := ref.Query().Get("return")
+
+		if ret == "" {
+			ret = "/admin"
+		}
+
+		c.Redirect(ret)
 		return nil
 	})
 
@@ -160,6 +156,29 @@ func getUserById(id string) User {
 
 func checkToken(token string) bool {
 	return true
+}
+
+func loggingRequest(next xun.HandleFunc) xun.HandleFunc {
+	return func(c *xun.Context) error {
+		n := time.Now()
+		defer func() {
+			duration := time.Since(n)
+
+			log.Println(c.Routing.Pattern, duration)
+		}()
+		return next(c)
+	}
+}
+
+func loadSession(next xun.HandleFunc) xun.HandleFunc {
+	return func(c *xun.Context) error {
+		s, err := c.Request.Cookie("session")
+		if err == nil {
+			c.Set("Session", s.Value)
+		}
+
+		return next(c)
+	}
 }
 
 type Login struct {

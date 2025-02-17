@@ -34,6 +34,8 @@ github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOf
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/yaitoo/xun v1.1.1 h1:eHeW8LUjRgMf1a8xvursztTSfy4NO8u98DQadGVzAac=
 github.com/yaitoo/xun v1.1.1/go.mod h1:bpKC5Oc3ZIV10QzmLtaSHPZRyc6N5ynkkZ98zlfHU80=
+github.com/yaitoo/xun v1.1.2 h1:VARZoP+6nqgbkz1JKVZDZRV7I0scwDZM96r47IYKZXA=
+github.com/yaitoo/xun v1.1.2/go.mod h1:bpKC5Oc3ZIV10QzmLtaSHPZRyc6N5ynkkZ98zlfHU80=
 golang.org/x/crypto v0.33.0 h1:IOBPskki6Lysi0lo9qQvbxiQ+FvsCC/YWOecCHAixus=
 golang.org/x/crypto v0.33.0/go.mod h1:bVdXmD7IV/4GdElGPozy6U7lWdRXA4qyRVGJV57uQ5M=
 golang.org/x/net v0.35.0 h1:T5GQRQb2y08kTAByq9L4/bz8cipCdA8FbRTXewonqY8=

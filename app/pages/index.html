@@ -1,9 +1,13 @@
 <!--layout:home-->
 {{ define "content" }}
-    <div id="app" class="text-3xl font-bold underline" hx-boost="true">
-        <span>hello {{.Name}}</span>
+    <div id="app" class="text-3xl font-bold " hx-boost="true">
+        {{ if .TempData.Session }}
+        <span>hello {{ .Data.Name }},</span> go <a href="/admin/" class="underline">admin</a>
+        {{else}}
+        <span>hello guest,</span> please <a href="/login" class="underline"> Login</a>
+        {{ end }}
 
-        <a href="/admin/">admin</a>
+       
     </div>
 
 {{ end }}
